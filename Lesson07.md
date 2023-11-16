@@ -57,21 +57,23 @@ get_tuple_from_string()
 
 ```sh
 def get_int_from_str(text):
+    a = "Вы ввели"
     try:
         input_value = int(text)
         if input_value > 0:
-            print("Вы ввели целое положительно число:", input_value)
+            print(a, "целое положительно число:", input_value)
         else:
-            print("Вы ввели целое отрицательно число:", input_value)
+            print(a, "целое отрицательно число:", input_value)
     except:
         try:
             input_value = float(text)
             if input_value > 0:
-                print("Вы ввели положительно дробное число:", input_value)
+                print(a, "положительно дробное число:", input_value)
             else:
-                print("Вы ввели отрицательное дробное число:", input_value)
+                print(a, "дробное число:", input_value)
         except:
-            print("Вы ввели некорректное число")
+            print(a, "некорректное число")
 
-get_int_from_str("-2.5")
+get_int_from_str("-2")
+
 ```
