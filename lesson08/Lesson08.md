@@ -37,5 +37,45 @@ dict_1 = {111112: ("roman", 28),
 with open('file_json.json', 'w') as file:
     json.dump(dict_1, file, indent=2, ensure_ascii=False)
 ```
-
 ##### 4. Прочитать сохраненный json-файл и записать данные на диск в csv-файл, первой строкой которого озоглавив первый столбец и добавив новый столбец "телефон"
+```sh
+import json
+import csv
+
+with open('file_json.json', 'r') as file_json:
+    data_json = json.load(file_json)
+
+with open('data.csv', 'w') as file_csv:
+    name_colum = ['id', 'name', 'age', 'phone']
+    numbers = ['111-111', '222-222', '333-333', '555-555', '666-666']
+    data_csv = csv.DictWriter(file_csv, fieldnames=name_colum)
+    data_csv.writeheader()
+    for i, j in zip(data_json, numbers):
+        data_csv.writerow({'id': i, 'name': data_json[i][0], 'age': data_json[i][1], 'phone': j})
+
+with open('data.csv', 'r') as file_csv:
+    data_csv_read = csv.reader(file_csv)
+    for i in data_csv_read:
+        print(i)
+
+```
+##### 5. Прочитать сохранённый csv-файл и сохранить данные в excel-файле, кроме возраста - столбец с этими данными не нужен. Таблица должна выглядить, как на примере.
+
+```sh
+import csv
+import openpyxl
+
+with open('data.csv', 'r') as file_csv:
+    data_csv = csv.DictReader(file_csv)
+
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+
+    for i, dct in enumerate(data_csv):
+        print(dct)
+        del dct['age']
+        if i == 0:
+            worksheet.append(list(dct.keys()))
+        worksheet.append(list(dct.values()))
+    workbook.save('data.xlsx')
+```
