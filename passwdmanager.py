@@ -150,7 +150,7 @@ if __name__ == "__main__":
     resource = sys.argv[3] if len(sys.argv) > 3 else "default_resource"
     user = sys.argv[4] if len(sys.argv) > 4 else generated_password
 
-    headers = {"AUTHTOKEN": "E0ED7324-C3EB-4DD0-8F38-B86917113740"}
+    headers = {"AUTHTOKEN": ""}
 
 
     if function_choice == "-edit":
