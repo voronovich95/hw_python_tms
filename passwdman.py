@@ -106,6 +106,21 @@ class PasswordManager:
         else:
             return 1000000 # Поже нужно переделать на False и добавить проверку в других функциях
 
+    def delete_resource(self, resource):
+        data_request = requests.delete(
+            f'https://pmp.idfinance.com/restapi/json/v1/resources/{self.get_resource_id(resource)}',
+            headers=self.headers)
+        json_delete_resource = data_request.text
+        json_loads_resource = json.loads(json_delete_resource)
+
+        if '"status":"Success"' in json_delete_resource:
+            status = json_loads_resource["operation"]["result"]["message"]
+            return status
+        else:
+            status = json_loads_resource["operation"]["result"]["message"]
+            return status
+
+
     def create_account_under_resource(self, account, resource, password):
         input_param = {
             "operation": {
@@ -136,33 +151,6 @@ class PasswordManager:
             status = json_loads_account_resource["operation"]["result"]["message"]
             return status
 
-    def edit_cred_account_under_resource(self, account, resource, password):
-        input_param = {
-            "operation": {
-                "Details": {
-                    "NEWPASSWORD": password,
-                    "RESETTYPE": "LOCAL",
-                    "REASON": "Password Expired"
-                }
-            }
-        }
-        data = "INPUT_DATA=" + str(input_param)
-        resource_id = self.get_accountid_resourceid(account, resource)[1]
-        account_id = self.get_accountid_resourceid(account, resource)[0]
-        data_request = requests.put(
-            f'https://pmp.idfinance.com/restapi/json/v1/resources/{resource_id}/accounts/{account_id}/password',
-            headers=self.headers, data=data)
-        json_edit_account = data_request.text
-        json_loads_account = json.loads(json_edit_account)
-
-        if '"status":"Success"' in json_edit_account:
-            status = json_loads_account["operation"]["result"]["message"]
-            return status
-        elif '"status":"Failed"' in json_edit_account and 'No such account found' in json_edit_account:
-            return self.create_account_under_resource(account, resource, password)
-        else:
-            status = json_loads_account["operation"]["result"]["message"]
-            return status
 
     def share_account_to_user(self, account, resource, user):
         userid = self.get_userid(user)
@@ -189,6 +177,62 @@ class PasswordManager:
             status = json_loads_account["operation"]["result"]["message"]
             return status
 
+    def edit_account(self, account, resource, jira_task_number, password ):
+        input_pass = {
+            "operation": {
+                "Details": {
+                    "NEWPASSWORD": password,
+                    "RESETTYPE": "LOCAL",
+                    "REASON": "Password Expired"
+                }
+            }
+        }
+
+        input_task_number = {
+            "operation": {
+                "Details": {
+                    "ACCOUNTNAME": account,
+                    "ACCOUNTPASSWORDPOLICY": "Strong",
+                    "ACCOUNTCUSTOMFIELD":
+                        [
+                            {
+                                "CUSTOMLABEL": "Jira issue number",
+                                "CUSTOMVALUE": jira_task_number
+                            }
+                        ]
+                }
+            }
+        }
+
+        data_pass = "INPUT_DATA=" + str(input_pass)
+        data_task_number = "INPUT_DATA=" + str(input_task_number)
+        resource_id = self.get_accountid_resourceid(account, resource)[1]
+        account_id = self.get_accountid_resourceid(account, resource)[0]
+        data_pass = requests.put(
+            f'https://pmp.idfinance.com/restapi/json/v1/resources/{resource_id}/accounts/{account_id}/password',
+            headers=self.headers, data=data_pass)
+        json_pass = data_pass.text
+        json_loads_pass = json.loads(json_pass)
+        if '"status":"Success"' in json_pass:
+            data_task_number = requests.put(
+                f'https://pmp.idfinance.com/restapi/json/v1/resources/{resource_id}/accounts/{account_id}',
+                headers=self.headers, data=data_task_number)
+            json_task_number = data_task_number.text
+            if '"status":"Success"' in json_task_number:
+                status = json_loads_pass["operation"]["result"]["message"]
+                return status
+
+        elif '"status":"Failed"' in json_pass and 'No such account found' in json_pass:
+            print(self.create_account_under_resource(account, resource, password))
+            resource_id = self.get_accountid_resourceid(account, resource)[1]
+            account_id = self.get_accountid_resourceid(account, resource)[0]
+            data_task_number = requests.put(
+                f'https://pmp.idfinance.com/restapi/json/v1/resources/{resource_id}/accounts/{account_id}',
+                headers=self.headers, data=data_task_number)
+            json_task_number = data_task_number.text
+            json_loads_task_number = json.loads(json_task_number)
+            return json_loads_task_number["operation"]["result"]["message"]
+
 
 if __name__ == "__main__":
     # Получение аргументов командной строки
@@ -197,13 +241,7 @@ if __name__ == "__main__":
     function_choice = sys.argv[1] if len(sys.argv) > 1 else "default_function"
     headers = {"AUTHTOKEN": api_key}
 
-    if function_choice == "-edit":
-        account = sys.argv[2]
-        resource = sys.argv[3]
-        passwd = sys.argv[4] if len(sys.argv) > 4 else generated_password
-        result = password_manager.edit_cred_account_under_resource(account, resource, passwd)
-
-    elif function_choice == "-share":
+    if function_choice == "-share":
         account = sys.argv[2]
         resource = sys.argv[3]
         user = sys.argv[4]
@@ -226,6 +264,13 @@ if __name__ == "__main__":
     elif function_choice == "-delete_user":
         username = sys.argv[2]
         result = password_manager.delete_user(username)
+
+    elif function_choice == "-edit_account":
+        account = sys.argv[2]
+        resource = sys.argv[3]
+        jira_task_number = sys.argv[4]
+        passwd = sys.argv[5] if len(sys.argv) > 5 else generated_password
+        result = password_manager.edit_account(account, resource, jira_task_number, passwd)
 
     else:
         result = "Invalid function choice"
