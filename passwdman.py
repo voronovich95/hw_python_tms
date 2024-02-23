@@ -3,8 +3,10 @@ import json
 import string
 import random
 import sys
-headers = {"AUTHTOKEN": ""}
+from decouple import config
 
+api_key = config('API_KEY')
+headers = {"AUTHTOKEN": api_key}
 
 class PasswordManager:
 
@@ -29,7 +31,52 @@ class PasswordManager:
             userid = json_loads_user['operation']['Details']['USERID']
             return userid
         else:
-            return 10000000
+            return 10000000 # Поже нужно переделать на False и добавить проверку в других функциях
+
+    def create_user(self, username, firstname, lastname, email, password):
+        input_param = {
+            "operation": {
+                "Details": {
+                    "USERNAME": username,
+                    "FIRSTNAME": firstname,
+                    "LASTNAME": lastname,
+                    "EMAIL": email,
+                    "PASSWORD": password,
+                    "POLICY": "Strong",
+                    "ROLE": "Password User",
+                    "ISSUPERADMIN": "false",
+                    "DEPARTMENT": "IT",
+                    "LOCATION": "Minsk",
+                    "ISAPIUSER": "false",
+                }
+            }
+        }
+
+        data = "INPUT_DATA=" + str(input_param)
+        data_request = requests.post(
+            'https://pmp.idfinance.com/restapi/json/v1/user', headers=self.headers, data=data)
+        json_create_user = data_request.text
+        json_loads_account = json.loads(json_create_user)
+        if '"status":"Success"' in json_create_user:
+            status = json_loads_account["operation"]["result"]["message"]
+            return status
+        else:
+            status = json_loads_account["operation"]["result"]["message"]
+            return status
+
+    def delete_user(self, user):
+        data_request = requests.delete(
+            f'https://pmp.idfinance.com/restapi/json/v1/user/{self.get_userid(user)}',
+            headers=self.headers)
+        json_delete_user = data_request.text
+        json_loads_user = json.loads(json_delete_user)
+
+        if '"status":"Success"' in json_delete_user:
+            status = json_loads_user["operation"]["result"]["message"]
+            return status
+        else:
+            status = json_loads_user["operation"]["result"]["message"]
+            return status
 
     def get_accountid_resourceid(self, account, resource):
         data_request = requests.get(
@@ -44,7 +91,7 @@ class PasswordManager:
             return account_id, resource_id
 
         else:
-            return (1000000, 1000000)
+            return (1000000, 1000000) # Позже нужно переделать на False и добавить проверку в других функциях
 
     def get_resource_id(self, name):
         data_request = requests.get(
@@ -57,7 +104,7 @@ class PasswordManager:
             resource_id = json_loads_resource["operation"]["Details"]["RESOURCEID"]
             return resource_id
         else:
-            return 1000000
+            return 1000000 # Поже нужно переделать на False и добавить проверку в других функциях
 
     def create_account_under_resource(self, account, resource, password):
         input_param = {
@@ -107,6 +154,7 @@ class PasswordManager:
             headers=self.headers, data=data)
         json_edit_account = data_request.text
         json_loads_account = json.loads(json_edit_account)
+
         if '"status":"Success"' in json_edit_account:
             status = json_loads_account["operation"]["result"]["message"]
             return status
@@ -121,7 +169,7 @@ class PasswordManager:
         input_param = {
             "operation": {
                 "Details": {
-                    "ACCESSTYPE": "read",
+                    "ACCESSTYPE": "view",
                     "USERID": userid
                 }
             }
@@ -137,8 +185,9 @@ class PasswordManager:
         if '"status":"Success"' in json_share_account:
             status = json_loads_account["operation"]["result"]["message"]
             return status
-
-
+        else:
+            status = json_loads_account["operation"]["result"]["message"]
+            return status
 
 
 if __name__ == "__main__":
@@ -146,21 +195,39 @@ if __name__ == "__main__":
     password_manager = PasswordManager(headers)
     generated_password = password_manager.generate_password()
     function_choice = sys.argv[1] if len(sys.argv) > 1 else "default_function"
-    account = sys.argv[2] if len(sys.argv) > 2 else "default_account"
-    resource = sys.argv[3] if len(sys.argv) > 3 else "default_resource"
-    user = sys.argv[4] if len(sys.argv) > 4 else generated_password
-
-    headers = {"AUTHTOKEN": ""}
-
+    headers = {"AUTHTOKEN": api_key}
 
     if function_choice == "-edit":
-        result = password_manager.edit_cred_account_under_resource(account, resource, generated_password)
+        account = sys.argv[2]
+        resource = sys.argv[3]
+        passwd = sys.argv[4] if len(sys.argv) > 4 else generated_password
+        result = password_manager.edit_cred_account_under_resource(account, resource, passwd)
+
     elif function_choice == "-share":
+        account = sys.argv[2]
+        resource = sys.argv[3]
+        user = sys.argv[4]
         result = password_manager.share_account_to_user(account, resource, user)
-    elif function_choice == "-create":
-        result = password_manager.create_account_under_resource(account, resource, generated_password)
+
+    elif function_choice == "-create_account":
+        account = sys.argv[2]
+        resource = sys.argv[3]
+        passwd = sys.argv[4] if len(sys.argv) > 4 else generated_password
+        result = password_manager.create_account_under_resource(account, resource, passwd)
+
+    elif function_choice == "-create_user":
+        username = sys.argv[2]
+        firstname = sys.argv[3]
+        lastname = sys.argv[4]
+        email = sys.argv[5]
+        passwd = sys.argv[6] if len(sys.argv) > 6 else generated_password
+        result = password_manager.create_user(username, firstname, lastname, email, passwd)
+
+    elif function_choice == "-delete_user":
+        username = sys.argv[2]
+        result = password_manager.delete_user(username)
+
     else:
         result = "Invalid function choice"
 
     print(result)
-
